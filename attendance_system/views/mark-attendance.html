@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mark Attendance</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        .course-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .session-info {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .header-right {
+            flex-shrink: 0;
+            margin-left: 16px;
+        }
+
+        .close-btn {
+            background: #ffffff;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            padding: 8px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .close-btn:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        .close-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .main-content {
+            margin-top: 76px;
+            margin-bottom: 70px;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .student-list {
+            background: #ffffff;
+        }
+
+        .student-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid #e8e8e8;
+            min-height: 56px;
+        }
+
+        .student-row:last-child {
+            border-bottom: none;
+        }
+
+        .student-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            flex: 1;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 0;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            background: #f5f5f5;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 6px 16px;
+            border: none;
+            background: transparent;
+            color: #666;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 60px;
+        }
+
+        .toggle-btn.active {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .toggle-btn:first-child {
+            border-right: 1px solid #d0d0d0;
+        }
+
+        .toggle-btn:hover:not(.active) {
+            background: #ffffff;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #ffffff;
+            border-top: 1px solid #e0e0e0;
+            padding: 12px 20px;
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+        }
+
+        .save-btn {
+            width: 100%;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .save-btn:hover:not(:disabled) {
+            background: #1e2b3a;
+        }
+
+        .save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 16px 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 16px 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .student-row {
+                padding: 12px 16px;
+                min-height: 52px;
+            }
+
+            .toggle-btn {
+                padding: 6px 12px;
+                min-width: 54px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="course-title" id="course-title">Loading...</div>
+            <div class="session-info" id="session-info">Loading...</div>
+        </div>
+        <div class="header-right">
+            <button class="close-btn" id="close-btn" disabled>Close Session</button>
+        </div>
+    </div>
+
+    <div class="main-content" id="main-content">
+        <div class="loading">Loading attendance data...</div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="save-btn" id="save-btn" disabled>Save Attendance</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/attendance_system/api';
+        let sessionId = null;
+        let attendanceData = {};
+
+        $(document).ready(function() {
+            sessionId = getQueryParam('session_id');
+            if (!sessionId) {
+                showError('Session ID not found');
+                return;
+            }
+            loadSessionDetails();
+        });
+
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        function loadSessionDetails() {
+            $.ajax({
+                url: API_BASE + '/professor/session-details',
+                type: 'GET',
+                data: { session_id: sessionId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        displaySessionDetails(response.data);
+                    } else {
+                        showError('Failed to load session');
+                    }
+                },
+                error: function() {
+                    showError('Error connecting to server');
+                }
+            });
+        }
+
+        function displaySessionDetails(data) {
+            const session = data.session;
+            const students = data.students;
+
+            const date = new Date(session.session_date);
+            const formattedDate = date.toLocaleDateString();
+            const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            $('#course-title').text(session.course_name + ' • ' + session.group_name);
+            $('#session-info').text(formattedDate + ' • ' + formattedTime);
+
+            if (session.status === 'closed') {
+                showError('This session is already closed');
+                $('#save-btn').prop('disabled', true);
+                $('#close-btn').prop('disabled', true);
+                return;
+            }
+
+            $('#close-btn').prop('disabled', false);
+            $('#save-btn').prop('disabled', false);
+
+            renderStudents(students);
+        }
+
+        function renderStudents(students) {
+            const container = $('#main-content');
+            container.empty();
+
+            if (students.length === 0) {
+                container.html('<div class="loading">No students in this session</div>');
+                return;
+            }
+
+            const studentList = $('<div class="student-list"></div>');
+
+            students.forEach((student) => {
+                const status = student.attendance_status;
+                const isPresent = status === 'present';
+
+                const row = $(`
+                    <div class="student-row">
+                        <span class="student-name">${student.full_name}</span>
+                        <div class="toggle-group">
+                            <button class="toggle-btn ${isPresent ? 'active' : ''}" data-record-id="${student.record_id}" data-status="present">Present</button>
+                            <button class="toggle-btn ${!isPresent ? 'active' : ''}" data-record-id="${student.record_id}" data-status="absent">Absent</button>
+                        </div>
+                    </div>
+                `);
+
+                studentList.append(row);
+                attendanceData[student.record_id] = status;
+            });
+
+            container.append(studentList);
+            attachEventListeners();
+        }
+
+        function attachEventListeners() {
+            $('.toggle-btn').on('click', function() {
+                const $toggleGroup = $(this).closest('.toggle-group');
+                const recordId = $(this).data('record-id');
+                const status = $(this).data('status');
+
+                $toggleGroup.find('.toggle-btn').removeClass('active');
+                $(this).addClass('active');
+
+                attendanceData[recordId] = status;
+            });
+
+            $('#close-btn').on('click', function() {
+                if (confirm('Are you sure you want to close this session?')) {
+                    closeSession();
+                }
+            });
+
+            $('#save-btn').on('click', function() {
+                saveAttendance();
+            });
+        }
+
+        function saveAttendance() {
+            const updates = {};
+            $('.student-row').each(function() {
+                const recordId = $(this).find('.toggle-btn.active').data('record-id');
+                const status = $(this).find('.toggle-btn.active').data('status');
+                updates[recordId] = status;
+            });
+
+            $('#save-btn').prop('disabled', true).text('Saving...');
+
+            $.ajax({
+                url: API_BASE + '/professor/mark-attendance',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    session_id: sessionId,
+                    updates: updates
+                }),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        closeSession();
+                    } else {
+                        showError(response.message || 'Failed to save attendance');
+                        $('#save-btn').prop('disabled', false).text('Save Attendance');
+                    }
+                },
+                error: function() {
+                    showError('Error saving attendance');
+                    $('#save-btn').prop('disabled', false).text('Save Attendance');
+                }
+            });
+        }
+
+        function closeSession() {
+            $.ajax({
+                url: API_BASE + '/professor/close-session',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    session_id: sessionId
+                }),
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        setTimeout(() => {
+                            window.location.href = '/attendance_system/views/professor-dashboard.html';
+                        }, 2000);
+                    }
+                },
+                error: function() {
+                    showError('Error closing session');
+                }
+            });
+        }
+
+        function showError(message) {
+            const container = $('#main-content');
+            container.html(`<div class="error-message">${message}</div>`);
+        }
+
+        function showSuccess(message) {
+            alert(message);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professor Dashboard</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .profile-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #e8e8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .main-content {
+            margin-top: 64px;
+            margin-bottom: 70px;
+            overflow-y: auto;
+            padding: 24px 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .course-card {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .course-card:hover {
+            border-color: #d0d0d0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+
+        .course-header {
+            padding: 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .course-header-left {
+            flex: 1;
+        }
+
+        .course-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .course-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .course-code {
+            font-size: 13px;
+            color: #666;
+            background: #f5f5f5;
+            padding: 3px 8px;
+            border-radius: 4px;
+        }
+
+        .course-stats {
+            display: flex;
+            gap: 24px;
+            font-size: 13px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .stat-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .course-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .action-btn {
+            background: #ffffff;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .action-btn:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        .expand-icon {
+            font-size: 18px;
+            color: #999;
+            transition: transform 0.2s ease;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .expand-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .session-list {
+            display: none;
+            background: #fafbfc;
+            border-top: 1px solid #e0e0e0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .session-list.expanded {
+            display: block;
+        }
+
+        .session-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .session-item:last-child {
+            border-bottom: none;
+        }
+
+        .session-left {
+            flex: 1;
+            display: block;      /* FIX — forces text to align at the top */
+            text-align: left;    /* FIX — prevents centering */
+        }
+
+
+        .session-date {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 3px;
+        }
+
+        .session-details {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .session-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .session-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-past {
+            background: #f0f0f0;
+            color: #999;
+        }
+
+        .badge-upcoming {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-open {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .session-action {
+            background: #ffffff;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            padding: 4px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .session-action:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #ffffff;
+            border-top: 1px solid #e0e0e0;
+            padding: 12px 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            flex: 1;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 11px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: #1e2b3a;
+        }
+
+        .btn-secondary {
+            flex: 1;
+            background: #ffffff;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            padding: 11px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="header-title">Dashboard</div>
+        </div>
+        <div class="profile-icon">👤</div>
+    </div>
+
+    <div class="main-content">
+        <div class="section-title">Your Courses</div>
+        <div id="courses-container" class="loading">Loading courses...</div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="btn-primary" onclick="window.location.href='#create-session'">Create Session</button>
+        <button class="btn-secondary" onclick="window.location.href='#reports'">View Reports</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/attendance_system/api';
+
+        $(document).ready(function() {
+            loadCourses();
+        });
+
+        function loadCourses() {
+            $.ajax({
+                url: API_BASE + '/professor/dashboard-courses',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        renderCourses(response.data);
+                    } else {
+                        showError('Failed to load courses');
+                    }
+                },
+                error: function() {
+                    showError('Error connecting to server');
+                }
+            });
+        }
+
+        function renderCourses(courses) {
+            const container = $('#courses-container');
+            container.empty();
+
+            if (courses.length === 0) {
+                container.html('<p style="text-align: center; color: #999;">No courses found</p>');
+                return;
+            }
+
+            courses.forEach((course, index) => {
+                const nextSessionDate = course.next_session_date 
+                    ? new Date(course.next_session_date).toLocaleDateString() 
+                    : 'No upcoming session';
+
+                const courseCard = `
+                    <div class="course-card" data-course-id="${course.course_id}" data-group-id="${course.group_id}">
+                        <div class="course-header">
+                            <div class="course-header-left">
+                                <div class="course-title-row">
+                                    <span class="course-name">${course.course_name}</span>
+                                    <span class="course-code">${course.group_name}</span>
+                                </div>
+                                <div class="course-stats">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Students</span>
+                                        <span class="stat-value">${course.student_count}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Sessions</span>
+                                        <span class="stat-value">${course.total_sessions}</span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Next</span>
+                                        <span class="stat-value">${nextSessionDate}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="course-header-right">
+                                <button class="action-btn" onclick="event.stopPropagation(); viewDetails(${course.course_id}, ${course.group_id})">View</button>
+                                <div class="expand-icon">+</div>
+                            </div>
+                        </div>
+                        <div class="session-list" id="sessions-${course.course_id}-${course.group_id}">
+                            <div class="loading" style="padding: 12px 16px;">Loading sessions...</div>
+                        </div>
+                    </div>
+                `;
+
+                container.append(courseCard);
+            });
+
+            // Attach event listeners
+            attachEventListeners();
+        }
+
+        function attachEventListeners() {
+            $('.course-header').on('click', function() {
+                const $card = $(this).closest('.course-card');
+                const courseId = $card.data('course-id');
+                const groupId = $card.data('group-id');
+                const $sessionList = $card.find('.session-list');
+                const $expandIcon = $card.find('.expand-icon');
+
+                if ($sessionList.hasClass('expanded')) {
+                    $sessionList.removeClass('expanded');
+                    $expandIcon.removeClass('expanded');
+                } else {
+                    loadSessions(courseId, groupId, $sessionList);
+                    $sessionList.addClass('expanded');
+                    $expandIcon.addClass('expanded');
+                }
+            });
+        }
+
+        function loadSessions(courseId, groupId, $container) {
+            // Check if already loaded
+            if ($container.find('.session-item').length > 0) {
+                return;
+            }
+
+            $.ajax({
+                url: API_BASE + '/professor/course-group-sessions',
+                type: 'GET',
+                data: { course_id: courseId, group_id: groupId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        renderSessions(response.data, $container);
+                    }
+                },
+                error: function() {
+                    $container.html('<div style="padding: 12px 16px; color: #c62828;">Error loading sessions</div>');
+                }
+            });
+        }
+
+        function renderSessions(sessions, $container) {
+            $container.empty();
+
+            if (sessions.length === 0) {
+                $container.html('<div style="padding: 12px 16px; text-align: center; color: #999;">No sessions yet</div>');
+                return;
+            }
+
+            sessions.forEach(session => {
+                const date = new Date(session.session_date);
+                const formattedDate = date.toLocaleDateString();
+                const formattedTime = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                const status = session.status === 'open' ? 'Open' : 'Closed';
+                const badgeClass = session.status === 'open' ? 'badge-open' : 'badge-past';
+                const buttonText = session.status === 'open' ? 'Mark' : 'View';
+
+                const sessionItem = `
+                    <div class="session-item">
+                        <div class="session-left">
+                            <div class="session-date">Session — ${formattedDate}</div>
+                            <div class="session-details">${formattedTime}</div>
+                        </div>
+                        <div class="session-right">
+                            <span class="session-badge ${badgeClass}">${status}</span>
+                            <button class="session-action" onclick="viewSession(${session.session_id}, '${session.status}')">${buttonText}</button>
+                        </div>
+                    </div>
+                `;
+
+                $container.append(sessionItem);
+            });
+            }
+
+        function viewDetails(courseId, groupId) {
+            // Redirect to attendance summary page
+            window.location.href = `/attendance_system/views/attendance-summary.html?course_id=${courseId}&group_id=${groupId}`;
+        }
+
+        function viewSession(sessionId, status) {
+            if (status === 'open') {
+                // Redirect to mark attendance page
+                window.location.href = `/attendance_system/views/mark-attendance.html?session_id=${sessionId}`;
+            } else {
+                // Redirect to view attendance page (read-only)
+                window.location.href = `/attendance_system/views/view-attendance.html?session_id=${sessionId}`;
+            }
+        }
+
+        function showError(message) {
+            const container = $('#courses-container');
+            container.html(`<div class="error-message">${message}</div>`);
+        }
+    </script>
+</body>
+</html>
