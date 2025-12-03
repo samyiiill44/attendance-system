@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Justifications</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #999;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .table-container {
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f5f5f5;
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            border-bottom: 1px solid #e0e0e0;
+            color: #666;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 13px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .student-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .student-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .student-email {
+            font-size: 12px;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .course-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .course-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .group-name {
+            font-size: 12px;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .session-date {
+            text-align: center;
+            padding: 6px 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .badge-absent {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .badge-pending {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .file-link {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-action {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            min-width: 70px;
+        }
+
+        .btn-approve {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .btn-approve:hover {
+            background: #c8e6c9;
+        }
+
+        .btn-reject {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .btn-reject:hover {
+            background: #ffcdd2;
+        }
+
+        .btn-action:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        .pagination button {
+            background: #ffffff;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .info {
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 13px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .file-preview {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        .file-preview-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .file-preview-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-icon {
+            font-size: 24px;
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-link-btn {
+            color: #2c3e50;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            background: #e8e8e8;
+        }
+
+        .btn-confirm {
+            flex: 1;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-confirm:hover:not(:disabled) {
+            background: #1e2b3a;
+        }
+
+        .btn-confirm:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-confirm.reject {
+            background: #c62828;
+        }
+
+        .btn-confirm.reject:hover:not(:disabled) {
+            background: #ad1457;
+        }
+
+        @media (max-width: 768px) {
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 10px 12px;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .btn-action {
+                width: 100%;
+            }
+
+            .modal-content {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Justification Requests</h1>
+            <p>Review and approve or reject student absence justifications</p>
+        </div>
+
+        <div class="table-container">
+            <div id="justifications-table"></div>
+        </div>
+
+        <div class="pagination">
+            <button id="prev-btn" disabled>← Previous</button>
+            <span class="info">
+                <span id="page-info">Page 1</span>
+            </span>
+            <button id="next-btn">Next →</button>
+        </div>
+    </div>
+
+    <div class="modal" id="view-modal">
+        <div class="modal-content">
+            <div class="modal-header" id="modal-title">Review Justification</div>
+            <div class="file-preview">
+                <div class="file-preview-label">Uploaded Document</div>
+                <div class="file-preview-item">
+                    <div class="file-icon">📄</div>
+                    <div class="file-info">
+                        <div class="file-name" id="file-name"></div>
+                        <a href="#" class="file-link-btn" id="file-link" target="_blank">View File</a>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeModal()">Close</button>
+                <button class="btn-action btn-reject" id="reject-btn" style="flex: 1; background: #ffebee; color: #c62828; border: none; padding: 10px;">Reject</button>
+                <button class="btn-action btn-approve" id="approve-btn" style="flex: 1; background: #e8f5e9; color: #2e7d32; border: none; padding: 10px;">Approve</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="confirm-modal">
+        <div class="modal-content">
+            <div class="modal-header" id="confirm-title"></div>
+            <p style="color: #666; font-size: 14px; margin-bottom: 24px;" id="confirm-message"></p>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeConfirmModal()">Cancel</button>
+                <button class="btn-confirm" id="confirm-btn"></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/attendance_system/api';
+        let currentPage = 0;
+        const pageSize = 50;
+        let currentJustification = null;
+        let pendingAction = null;
+
+        $(document).ready(function() {
+            loadJustifications();
+        });
+
+        function loadJustifications() {
+            const offset = currentPage * pageSize;
+
+            $('#justifications-table').html('<div class="loading">Loading justifications...</div>');
+
+            $.ajax({
+                url: API_BASE + '/admin/pending-justifications',
+                type: 'GET',
+                data: {
+                    limit: pageSize,
+                    offset: offset
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        renderJustificationsTable(response.data);
+                        updatePagination(response.data.length);
+                    } else {
+                        $('#justifications-table').html('<div class="error">Failed to load justifications</div>');
+                    }
+                },
+                error: function() {
+                    $('#justifications-table').html('<div class="error">Error connecting to server</div>');
+                }
+            });
+        }
+
+        function renderJustificationsTable(justifications) {
+            if (justifications.length === 0) {
+                $('#justifications-table').html(`
+                    <div class="empty">
+                        <div class="empty-icon">✓</div>
+                        <p>No pending justifications</p>
+                    </div>
+                `);
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Course • Group</th>
+                            <th>Session Date</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            justifications.forEach(j => {
+                const submittedDate = new Date(j.submitted_date).toLocaleDateString();
+                
+                html += `
+                    <tr>
+                        <td>
+                            <div class="student-info">
+                                <span class="student-name">${j.student_name}</span>
+                                <span class="student-email">${j.student_email}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="course-info">
+                                <span class="course-name">${j.course_name}</span>
+                                <span class="group-name">${j.group_name}</span>
+                            </div>
+                        </td>
+                        <td class="session-date">${j.session_date}</td>
+                        <td>
+                            <span class="badge badge-absent">${j.attendance_status}</span>
+                        </td>
+                        <td>${submittedDate}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn-action btn-approve" onclick="viewJustification(${j.justification_id}, '${j.file_path}', '${j.file_name || 'document.pdf'}')">View & Review</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            $('#justifications-table').html(html);
+        }
+
+        function viewJustification(justId, filePath, fileName) {
+            currentJustification = { id: justId, filePath: filePath };
+            
+            $('#file-name').text(fileName);
+            $('#file-link').attr('href', API_BASE.replace('/api', '') + '/' + filePath);
+            
+            $('#view-modal').addClass('active');
+
+            $('#approve-btn').off('click').on('click', function() {
+                showConfirmModal('Approve Justification', 'Are you sure you want to approve this justification?', 'approve');
+            });
+
+            $('#reject-btn').off('click').on('click', function() {
+                showConfirmModal('Reject Justification', 'Are you sure you want to reject this justification?', 'reject');
+            });
+        }
+
+        function closeModal() {
+            $('#view-modal').removeClass('active');
+            currentJustification = null;
+        }
+
+        function showConfirmModal(title, message, action) {
+            pendingAction = action;
+            $('#confirm-title').text(title);
+            $('#confirm-message').text(message);
+            
+            const confirmBtn = $('#confirm-btn');
+            confirmBtn.text(action === 'approve' ? 'Approve' : 'Reject');
+            confirmBtn.removeClass('reject');
+            if (action === 'reject') {
+                confirmBtn.addClass('reject');
+            }
+            
+            confirmBtn.off('click').on('click', executeAction);
+            
+            $('#view-modal').removeClass('active');
+            $('#confirm-modal').addClass('active');
+        }
+
+        function closeConfirmModal() {
+            $('#confirm-modal').removeClass('active');
+            $('#view-modal').addClass('active');
+            pendingAction = null;
+        }
+
+        function executeAction() {
+            if (!currentJustification || !pendingAction) return;
+
+            const endpoint = pendingAction === 'approve' ? 'approve-justification' : 'reject-justification';
+            const btn = $('#confirm-btn');
+            
+            btn.prop('disabled', true).text('Processing...');
+
+            $.ajax({
+                url: API_BASE + '/admin/' + endpoint,
+                type: 'POST',
+                data: { justification_id: currentJustification.id },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        closeConfirmModal();
+                        closeModal();
+                        currentPage = 0;
+                        loadJustifications();
+                    } else {
+                        alert(response.message || 'Operation failed');
+                        btn.prop('disabled', false).text(pendingAction === 'approve' ? 'Approve' : 'Reject');
+                    }
+                },
+                error: function() {
+                    alert('Error processing request');
+                    btn.prop('disabled', false).text(pendingAction === 'approve' ? 'Approve' : 'Reject');
+                }
+            });
+        }
+
+        function updatePagination(count) {
+            $('#page-info').text(`Page ${currentPage + 1}`);
+            $('#prev-btn').prop('disabled', currentPage === 0).off('click').on('click', function() {
+                if (currentPage > 0) {
+                    currentPage--;
+                    loadJustifications();
+                }
+            });
+            $('#next-btn').prop('disabled', count < pageSize).off('click').on('click', function() {
+                currentPage++;
+                loadJustifications();
+            });
+        }
+    </script>
+</body>
+</html>

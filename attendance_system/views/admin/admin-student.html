@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background: #1e2b3a;
+        }
+
+        .filters {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #666;
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 10px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #2c3e50;
+            box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+        }
+
+        .table-container {
+            background: #ffffff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f5f5f5;
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            border-bottom: 1px solid #e0e0e0;
+            color: #666;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #e8e8e8;
+            font-size: 13px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: #f9f9f9;
+        }
+
+        .student-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-program {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-group {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .attendance-stat {
+            text-align: center;
+            padding: 6px 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #666;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2c3e50;
+            box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .btn-cancel {
+            flex: 1;
+            background: #f5f5f5;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            background: #e8e8e8;
+        }
+
+        .btn-submit {
+            flex: 1;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            background: #1e2b3a;
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .pagination {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            padding: 20px;
+        }
+
+        .pagination button {
+            background: #ffffff;
+            color: #333;
+            border: 1px solid #d0d0d0;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .info {
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .filter-row {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 10px 12px;
+            }
+
+            .modal-content {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Manage Students</h1>
+            <button class="btn-primary" id="add-btn">+ Add Student</button>
+        </div>
+
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Search</label>
+                    <input type="text" id="search-input" placeholder="Name or email...">
+                </div>
+                <div class="filter-group">
+                    <label>Program</label>
+                    <select id="program-filter">
+                        <option value="">All Programs</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Group</label>
+                    <select id="group-filter" disabled>
+                        <option value="">All Groups</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div id="students-table"></div>
+        </div>
+
+        <div class="pagination">
+            <button id="prev-btn" disabled>← Previous</button>
+            <span class="info">
+                <span id="page-info">Page 1</span>
+            </span>
+            <button id="next-btn">Next →</button>
+        </div>
+    </div>
+
+    <div class="modal" id="add-modal">
+        <div class="modal-content">
+            <div class="modal-header">Add New Student</div>
+            <form id="add-form">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="name-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="password-input" required>
+                </div>
+                <div class="form-group">
+                    <label>Program</label>
+                    <select id="program-input" required>
+                        <option value="">Select Program</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Group</label>
+                    <select id="group-input" required disabled>
+                        <option value="">Select Group</option>
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+                    <button type="submit" class="btn-submit" id="submit-btn">Add Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/attendance_system/api';
+        let currentPage = 0;
+        const pageSize = 50;
+
+        $(document).ready(function() {
+            loadPrograms();
+            loadStudents();
+            attachEventListeners();
+        });
+
+        function attachEventListeners() {
+            $('#add-btn').on('click', openAddModal);
+            $('#search-input').on('keyup', function() {
+                currentPage = 0;
+                loadStudents();
+            });
+
+            $('#program-filter').on('change', function() {
+                currentPage = 0;
+                $('#group-filter').val('').prop('disabled', !$(this).val());
+                if ($(this).val()) {
+                    loadGroupsForFilter($(this).val());
+                }
+                loadStudents();
+            });
+
+            $('#group-filter').on('change', function() {
+                currentPage = 0;
+                loadStudents();
+            });
+
+            $('#program-input').on('change', function() {
+                $('#group-input').val('').prop('disabled', !$(this).val());
+                if ($(this).val()) {
+                    loadGroupsForForm($(this).val());
+                }
+            });
+
+            $('#add-form').on('submit', function(e) {
+                e.preventDefault();
+                submitAddForm();
+            });
+
+            $('#prev-btn').on('click', function() {
+                if (currentPage > 0) {
+                    currentPage--;
+                    loadStudents();
+                }
+            });
+
+            $('#next-btn').on('click', function() {
+                currentPage++;
+                loadStudents();
+            });
+        }
+
+        function openAddModal() {
+            $('#add-modal').addClass('active');
+        }
+
+        function closeAddModal() {
+            $('#add-modal').removeClass('active');
+            $('#add-form')[0].reset();
+            $('#group-input').prop('disabled', true);
+        }
+
+        function loadPrograms() {
+            $.ajax({
+                url: API_BASE + '/admin/programs',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        const programs = response.data;
+                        let filterHtml = '<option value="">All Programs</option>';
+                        let formHtml = '<option value="">Select Program</option>';
+                        
+                        programs.forEach(p => {
+                            filterHtml += `<option value="${p.program_id}">${p.name}</option>`;
+                            formHtml += `<option value="${p.program_id}">${p.name}</option>`;
+                        });
+                        
+                        $('#program-filter').html(filterHtml);
+                        $('#program-input').html(formHtml);
+                    }
+                }
+            });
+        }
+
+        function loadGroupsForFilter(programId) {
+            $.ajax({
+                url: API_BASE + '/admin/groups',
+                type: 'GET',
+                data: { program_id: programId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        let html = '<option value="">All Groups</option>';
+                        response.data.forEach(g => {
+                            html += `<option value="${g.group_id}">${g.name}</option>`;
+                        });
+                        $('#group-filter').html(html);
+                    }
+                }
+            });
+        }
+
+        function loadGroupsForForm(programId) {
+            $.ajax({
+                url: API_BASE + '/admin/groups',
+                type: 'GET',
+                data: { program_id: programId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        let html = '<option value="">Select Group</option>';
+                        response.data.forEach(g => {
+                            html += `<option value="${g.group_id}">${g.name}</option>`;
+                        });
+                        $('#group-input').html(html).prop('disabled', false);
+                    }
+                }
+            });
+        }
+
+        function loadStudents() {
+            const search = $('#search-input').val();
+            const programId = $('#program-filter').val();
+            const groupId = $('#group-filter').val();
+            const offset = currentPage * pageSize;
+
+            $('#students-table').html('<div class="loading">Loading students...</div>');
+
+            $.ajax({
+                url: API_BASE + '/admin/get-students',
+                type: 'GET',
+                data: {
+                    search: search,
+                    program_id: programId,
+                    group_id: groupId,
+                    limit: pageSize,
+                    offset: offset
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        renderStudentsTable(response.data);
+                        updatePagination(response.data.length);
+                    } else {
+                        $('#students-table').html('<div class="error">Failed to load students</div>');
+                    }
+                },
+                error: function() {
+                    $('#students-table').html('<div class="error">Error connecting to server</div>');
+                }
+            });
+        }
+
+        function renderStudentsTable(students) {
+            if (students.length === 0) {
+                $('#students-table').html('<div class="loading">No students found</div>');
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Program</th>
+                            <th>Group</th>
+                            <th>Sessions</th>
+                            <th>Present</th>
+                            <th>Absent</th>
+                            <th>Justified</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            students.forEach(student => {
+                html += `
+                    <tr>
+                        <td class="student-name">${student.full_name}</td>
+                        <td>${student.email}</td>
+                        <td><span class="badge badge-program">${student.program_name || 'N/A'}</span></td>
+                        <td><span class="badge badge-group">${student.group_name || 'N/A'}</span></td>
+                        <td class="attendance-stat">${student.total_sessions || 0}</td>
+                        <td class="attendance-stat" style="background: #e8f5e9; color: #2e7d32;">${student.present_count || 0}</td>
+                        <td class="attendance-stat" style="background: #ffebee; color: #c62828;">${student.absent_count || 0}</td>
+                        <td class="attendance-stat" style="background: #fff3e0; color: #f57c00;">${student.justified_count || 0}</td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            $('#students-table').html(html);
+        }
+
+        function updatePagination(count) {
+            $('#page-info').text(`Page ${currentPage + 1}`);
+            $('#prev-btn').prop('disabled', currentPage === 0);
+            $('#next-btn').prop('disabled', count < pageSize);
+        }
+
+        function submitAddForm() {
+            const formData = new FormData();
+            formData.append('full_name', $('#name-input').val());
+            formData.append('email', $('#email-input').val());
+            formData.append('password', $('#password-input').val());
+            formData.append('program_id', $('#program-input').val());
+            formData.append('group_id', $('#group-input').val());
+
+            $('#submit-btn').prop('disabled', true).text('Adding...');
+
+            $.ajax({
+                url: API_BASE + '/admin/add-student',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        closeAddModal();
+                        currentPage = 0;
+                        loadStudents();
+                    } else {
+                        alert(response.message || 'Failed to add student');
+                        $('#submit-btn').prop('disabled', false).text('Add Student');
+                    }
+                },
+                error: function() {
+                    alert('Error adding student');
+                    $('#submit-btn').prop('disabled', false).text('Add Student');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

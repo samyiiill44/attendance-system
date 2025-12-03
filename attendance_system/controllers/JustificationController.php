@@ -1,97 +1,85 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../services/JustificationService.php';
+require_once __DIR__ . '/../services/StudentService.php';
 require_once __DIR__ . '/../utils/Response.php';
 require_once __DIR__ . '/../utils/Auth.php';
 
 class JustificationController {
-    private $justificationService;
+    private $studentService;
+    private $uploadDir = __DIR__ . '/../../uploads/justifications/';
+    private $maxFileSize = 5 * 1024 * 1024; // 5MB
+    private $allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    private $allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'doc', 'docx'];
 
     public function __construct() {
         global $conn;
-        $this->justificationService = new JustificationService($conn);
+        $this->studentService = new StudentService($conn);
     }
 
     public function submitJustification() {
         $session = Auth::checkRole('student');
         $student_id = $session['user_id'];
 
-        $data = json_decode(file_get_contents("php://input"), true);
+        $record_id = $_POST['record_id'] ?? null;
+        $reason = $_POST['reason'] ?? null;
+        $file = $_FILES['file'] ?? null;
 
-        if (!isset($data['record_id']) || !isset($data['file_path'])) {
-            Response::error("Record ID and file path required", 400);
+        if (!$record_id || !$reason) {
+            Response::error("Record ID and reason are required", 400);
+            return;
         }
 
-        $result = $this->justificationService->submitJustification(
-            $student_id,
-            $data['record_id'],
-            $data['file_path']
-        );
+        if (!$file || $file['error'] === UPLOAD_ERR_NO_FILE) {
+            Response::error("File is required", 400);
+            return;
+        }
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            Response::error("File upload error", 400);
+            return;
+        }
+
+        if ($file['size'] > $this->maxFileSize) {
+            Response::error("File size exceeds 5MB limit", 400);
+            return;
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        if (!in_array($mimeType, $this->allowedMimes)) {
+            Response::error("File type not allowed. Allowed: PDF, Images, Word documents", 400);
+            return;
+        }
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, $this->allowedExtensions)) {
+            Response::error("Invalid file extension", 400);
+            return;
+        }
+
+        if (!is_dir($this->uploadDir)) {
+            mkdir($this->uploadDir, 0755, true);
+        }
+
+        $fileName = $student_id . '_' . $record_id . '_' . time() . '.' . $ext;
+        $filePath = $this->uploadDir . $fileName;
+
+        if (!move_uploaded_file($file['tmp_name'], $filePath)) {
+            Response::error("Failed to save file", 500);
+            return;
+        }
+
+        $relativeFilePath = 'uploads/justifications/' . $fileName;
+        $result = $this->studentService->submitJustification($student_id, $record_id, $reason, $relativeFilePath);
 
         if ($result['success']) {
-            Response::success(null, $result['message'], 201);
+            Response::success(null, $result['message'], $result['code']);
         } else {
+            unlink($filePath);
             Response::error($result['message'], $result['code']);
         }
-    }
-
-    public function approveJustification() {
-        $session = Auth::checkRoles(['professor', 'admin']);
-        $approver_id = $session['user_id'];
-
-        $data = json_decode(file_get_contents("php://input"), true);
-
-        if (!isset($data['justification_id'])) {
-            Response::error("Justification ID required", 400);
-        }
-
-        $result = $this->justificationService->approveJustification(
-            $data['justification_id'],
-            $approver_id
-        );
-
-        if ($result['success']) {
-            Response::success(null, $result['message'], 200);
-        } else {
-            Response::error($result['message'], $result['code']);
-        }
-    }
-
-    public function rejectJustification() {
-        $session = Auth::checkRoles(['professor', 'admin']);
-        $approver_id = $session['user_id'];
-
-        $data = json_decode(file_get_contents("php://input"), true);
-
-        if (!isset($data['justification_id'])) {
-            Response::error("Justification ID required", 400);
-        }
-
-        $result = $this->justificationService->rejectJustification(
-            $data['justification_id'],
-            $approver_id
-        );
-
-        if ($result['success']) {
-            Response::success(null, $result['message'], 200);
-        } else {
-            Response::error($result['message'], $result['code']);
-        }
-    }
-
-    public function getPendingJustifications() {
-        Auth::checkRoles(['professor', 'admin']);
-
-        $result = $this->justificationService->getPendingJustifications();
-        Response::success($result['data'], "Pending justifications", 200);
-    }
-
-    public function getMyJustifications() {
-        $session = Auth::checkRole('student');
-        $student_id = $session['user_id'];
-
-        $result = $this->justificationService->getStudentJustifications($student_id);
-        Response::success($result['data'], "Your justifications", 200);
     }
 }
 ?>

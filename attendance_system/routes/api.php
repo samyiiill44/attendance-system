@@ -3,7 +3,9 @@ require_once __DIR__ . '/../controllers/AuthController.php';
 require_once __DIR__ . '/../controllers/ProfessorController.php';
 require_once __DIR__ . '/../controllers/StudentController.php';
 require_once __DIR__ . '/../controllers/JustificationController.php';
+require_once __DIR__ . '/../controllers/AdminController.php';
 
+$adminController = new AdminController();
 $request_method = $_SERVER['REQUEST_METHOD'];
 $request_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $request_path = str_replace('/attendance_system', '', $request_path);
@@ -43,21 +45,37 @@ if ($request_path == '/api/auth/login' && $request_method == 'POST') {
     $professorController->markAttendance();
 } elseif ($request_path == '/api/student/get-courses' && $request_method == 'GET') {
     $studentController->getEnrolledCourses();
-} elseif ($request_path == '/api/student/get-attendance' && $request_method == 'GET') {
-    $studentController->getAttendance();
-} elseif ($request_path == '/api/student/get-summary' && $request_method == 'GET') {
+} elseif ($request_path == '/api/student/dashboard-courses' && $request_method == 'GET') {
+    $studentController->getDashboardCourses();
+} elseif ($request_path == '/api/student/info' && $request_method == 'GET') {
+    $studentController->getStudentInfo();
+} 
+ elseif ($request_path == '/api/student/get-summary' && $request_method == 'GET') {
     $studentController->getAttendanceSummary();
+} elseif ($request_path == '/api/student/get-attendance-details' && $request_method == 'GET') {
+    $studentController->getAttendanceDetails();
+}
+ elseif ($request_path == '/api/student/course-info' && $request_method == 'GET') {
+    $studentController->getCourseInfo();
 } elseif ($request_path == '/api/justification/submit' && $request_method == 'POST') {
     $justificationController->submitJustification();
-} elseif ($request_path == '/api/justification/approve' && $request_method == 'POST') {
-    $justificationController->approveJustification();
-} elseif ($request_path == '/api/justification/reject' && $request_method == 'POST') {
-    $justificationController->rejectJustification();
-} elseif ($request_path == '/api/justification/pending' && $request_method == 'GET') {
-    $justificationController->getPendingJustifications();
-} elseif ($request_path == '/api/justification/my-justifications' && $request_method == 'GET') {
-    $justificationController->getMyJustifications();
-} else {
+}
+ elseif ($request_path == '/api/admin/add-student' && $request_method == 'POST') {
+    $adminController->addStudent();
+} elseif ($request_path == '/api/admin/get-students' && $request_method == 'GET') {
+    $adminController->getStudents();
+} elseif ($request_path == '/api/admin/pending-justifications' && $request_method == 'GET') {
+    $adminController->getPendingJustifications();
+} elseif ($request_path == '/api/admin/approve-justification' && $request_method == 'POST') {
+    $adminController->approveJustification();
+} elseif ($request_path == '/api/admin/reject-justification' && $request_method == 'POST') {
+    $adminController->rejectJustification();
+} elseif ($request_path == '/api/admin/programs' && $request_method == 'GET') {
+    $adminController->getPrograms();
+} elseif ($request_path == '/api/admin/groups' && $request_method == 'GET') {
+    $adminController->getGroups();
+}
+else {
     http_response_code(404);
     echo json_encode(['error' => 'Route not found']);
 }

@@ -11,7 +11,6 @@ class ProfessorController {
 
     public function __construct() {
         global $conn;
-        $this->attendanceService = new AttendanceService($conn);
         $this->professorService = new ProfessorService($conn);
     }
 

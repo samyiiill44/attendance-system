@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Attendance Summary</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-left { flex: 1; }
+
+        .course-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px; }
+        .course-meta { font-size: 13px; color: #999; }
+
+        .header-right { display: flex; gap: 10px; flex-shrink: 0; margin-left: 20px; }
+
+        .header-btn {
+            background: #ffffff; color: #333; border: 1px solid #d0d0d0; padding: 8px 14px;
+            border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; white-space: nowrap;
+        }
+        .header-btn:hover { background: #f5f5f5; border-color: #999; }
+
+        .main-content {
+            margin-top: 64px;
+            margin-bottom: 70px;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card { background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 14px; }
+        .card-label { font-size: 12px; color: #999; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card-value { font-size: 24px; font-weight: 600; color: #333; }
+
+        .controls-bar {
+            background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
+            display: flex; gap: 16px; align-items: center;
+        }
+
+        .control-group { display:flex; gap:8px; align-items:center; }
+        .control-label { font-size:13px; color:#666; font-weight:500; }
+        .control-select { border:1px solid #d0d0d0; border-radius:4px; padding:6px 10px; min-width:180px; }
+
+        .table-container { background:#fff; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden; margin-bottom:16px; }
+        table { width:100%; border-collapse: collapse; font-size:13px; }
+        thead { background:#f5f5f5; border-bottom:1px solid #e0e0e0; }
+        th { padding:12px 16px; text-align:left; font-weight:600; color:#666; border-right:1px solid #e8e8e8; }
+        th:last-child { border-right:none; }
+        td { padding:12px 16px; border-right:1px solid #e8e8e8; border-bottom:1px solid #e8e8e8; }
+        td:last-child { border-right:none; }
+
+        tbody tr:hover { background:#fafbfc; cursor:pointer; }
+        tbody tr:last-child td { border-bottom:none; }
+
+        .student-name { font-weight:500; color:#333; }
+        .status-badge { display:inline-block; padding:3px 8px; border-radius:3px; font-size:11px; font-weight:600; text-align:center; }
+        .status-good { background:#e8f5e9; color:#2e7d32; }
+        .status-warning { background:#fff3e0; color:#f57f17; }
+        .status-risk { background:#ffebee; color:#c62828; }
+
+        .row-good { background:#fafbfa; }
+        .row-warning { background:#fffbf5; }
+        .row-risk { background:#fffafb; }
+
+        .loading { text-align:center; padding:40px 20px; color:#999; }
+        .error-message { background:#ffebee; color:#c62828; padding:16px 20px; text-align:center; font-size:14px; border-radius:4px; }
+
+        .bottom-bar { position:fixed; bottom:0; width:100%; background:#ffffff; border-top:1px solid #e0e0e0; padding:12px 20px; display:flex; gap:10px; }
+        .btn-primary { flex:1; background:#2c3e50; color:#fff; border:none; padding:12px; border-radius:4px; cursor:pointer; font-weight:600; }
+        .btn-secondary { flex:1; background:#fff; color:#333; border:1px solid #d0d0d0; padding:12px; border-radius:4px; cursor:pointer; font-weight:600; }
+
+        @media (max-width:768px) {
+            .summary-cards { grid-template-columns: repeat(2, 1fr); }
+            .controls-bar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="course-title" id="course-title">Loading...</div>
+            <div class="course-meta" id="course-meta">Loading...</div>
+        </div>
+        <div class="header-right">
+            <select class="header-btn" id="group-select">
+                <option value="">Select Group...</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- added id so showError can target this element -->
+    <div id="main-content" class="main-content">
+        <div class="summary-cards" id="summary-cards">
+            <div class="card"><div class="card-label">Total Students</div><div class="card-value">—</div></div>
+            <div class="card"><div class="card-label">Avg Attendance</div><div class="card-value">—</div></div>
+            <div class="card"><div class="card-label">Total Absences</div><div class="card-value">—</div></div>
+            <div class="card"><div class="card-label">At Risk</div><div class="card-value">—</div></div>
+        </div>
+
+        <div class="controls-bar">
+            <div class="control-group">
+                <label class="control-label">Sort by:</label>
+                <select class="control-select" id="sort-select">
+                    <option value="name">Name (A-Z)</option>
+                    <option value="absences">Absences (High)</option>
+                    <option value="attendance">Attendance Rate (Low)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Absences</th>
+                        <th>Attendance %</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="student-table">
+                    <tr><td colspan="4" class="loading">Loading students...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="btn-secondary" onclick="window.location.href='/attendance_system/views/professor/dashboard.html'">Back to Dashboard</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost/attendance_system/api';
+        let courseId = null;
+        let currentGroupId = null;
+        let allStudents = [];
+
+        $(document).ready(function() {
+            courseId = getQueryParam('course_id');
+            if (!courseId) {
+                showError('Course ID not found');
+                return;
+            }
+            loadGroups();
+        });
+
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        function loadGroups() {
+            $.ajax({
+                url: API_BASE + '/professor/groups-for-course',
+                type: 'GET',
+                data: { course_id: courseId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        populateGroupSelect(response.data);
+                        // If API returned groups, ensure first one is loaded (populateGroupSelect also triggers load)
+                        // but keep this as a fallback:
+                        if (response.data.length > 0 && !currentGroupId) {
+                            loadSummary(response.data[0].group_id);
+                        }
+                    } else {
+                        showError('No groups found for this course');
+                    }
+                },
+                error: function() {
+                    showError('Error loading groups');
+                }
+            });
+        }
+
+        function populateGroupSelect(groups) {
+            const select = $('#group-select');
+            select.empty();
+
+            groups.forEach(group => {
+                // include data-course-name so we can set title when changed
+                select.append(`<option value="${group.group_id}" data-course-name="${escapeHtml(group.course_name || '')}">${escapeHtml(group.name || '')}</option>`);
+            });
+
+            // Set first group and update title, then load its summary
+            if (groups.length > 0) {
+                const first = groups[0];
+                select.val(first.group_id);
+                $('#course-title').text(first.course_name || 'Course');
+                $('#course-meta').text('Group: ' + (first.name || ''));
+                loadSummary(first.group_id);
+            }
+
+            select.off('change').on('change', function() {
+                const groupId = $(this).val();
+                const groupName = $(this).find('option:selected').text();
+                const courseName = $(this).find('option:selected').attr('data-course-name');
+                $('#course-title').text(courseName || 'Course');
+                $('#course-meta').text('Group: ' + groupName);
+                if (groupId) {
+                    loadSummary(groupId);
+                }
+            });
+        }
+
+        function loadSummary(groupId) {
+            currentGroupId = groupId;
+            $.ajax({
+                url: API_BASE + '/professor/attendance-summary',
+                type: 'GET',
+                data: { course_id: courseId, group_id: groupId },
+                dataType: 'json',
+                success: function(response) {
+                    if (response.status === 'success') {
+                        // Ensure we always have an array
+                        allStudents = Array.isArray(response.data) ? response.data : [];
+                        displaySummary(allStudents);
+                        renderTable(allStudents);
+                    } else {
+                        showError('No attendance data available');
+                    }
+                },
+                error: function() {
+                    showError('Error loading attendance summary');
+                }
+            });
+        }
+
+        function displaySummary(students) {
+            // Coerce numeric fields before doing math to avoid string concatenation or NaN
+            const totalStudents = students.length;
+            const totalAbsences = students.reduce((sum, s) => {
+                return sum + (Number(s.absent_count) || 0);
+            }, 0);
+
+            const avgAttendanceRaw = students.length > 0
+                ? students.reduce((sum, s) => sum + (Number(s.attendance_rate) || 0), 0) / students.length
+                : 0;
+
+            // keep one decimal for the summary
+            const avgAttendance = Number.isFinite(avgAttendanceRaw) ? avgAttendanceRaw : 0;
+            const avgAttendanceDisplay = avgAttendance.toFixed(1);
+
+            const atRisk = students.filter(s => (Number(s.attendance_rate) || 0) < 75).length;
+
+            $('#summary-cards').html(`
+                <div class="card"><div class="card-label">Total Students</div><div class="card-value">${totalStudents}</div></div>
+                <div class="card"><div class="card-label">Avg Attendance</div><div class="card-value">${avgAttendanceDisplay}%</div></div>
+                <div class="card"><div class="card-label">Total Absences</div><div class="card-value">${totalAbsences}</div></div>
+                <div class="card"><div class="card-label">At Risk</div><div class="card-value">${atRisk}</div></div>
+            `);
+        }
+
+        function renderTable(students) {
+            const tbody = $('#student-table');
+            tbody.empty();
+
+            if (!students || students.length === 0) {
+                tbody.html('<tr><td colspan="4" class="loading">No students found</td></tr>');
+                return;
+            }
+
+            students.forEach(student => {
+                // coerce to numbers to avoid string concat and NaN
+                const attendanceRate = Number(student.attendance_rate);
+                const attendanceNum = Number.isFinite(attendanceRate) ? attendanceRate : 0;
+                const absencesNum = Number(student.absent_count);
+                const absences = Number.isFinite(absencesNum) ? absencesNum : 0;
+
+                let statusClass = 'status-risk';
+                let statusText = 'At Risk';
+                if (attendanceNum >= 90) {
+                    statusClass = 'status-good';
+                    statusText = 'Good';
+                } else if (attendanceNum >= 75) {
+                    statusClass = 'status-warning';
+                    statusText = 'Warning';
+                }
+
+                const rowClass = statusClass.replace('status-', 'row-');
+
+                const row = `
+                    <tr class="${rowClass}">
+                        <td class="student-name">${escapeHtml(student.full_name || '')}</td>
+                        <td>${absences}</td>
+                        <td>${attendanceNum.toFixed(1)}%</td>
+                        <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                    </tr>
+                `;
+
+                tbody.append(row);
+            });
+        }
+
+        function showError(message) {
+            $('#main-content').html(`<div class="error-message">${escapeHtml(message)}</div>`);
+        }
+
+        // small helper to escape text inserted into DOM to avoid accidental HTML injection
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>
